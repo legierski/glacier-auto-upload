@@ -6,6 +6,7 @@ GLACIER_LOCK=.glacier-lock
 GLACIER_LOGS=.glacier-logs
 GLACIER_VAULTS=.glacier-vaults
 GLACIER_ARCHIVES=.glacier-archives
+GLACIER_IGNORE=.glacier-ignore
 GLACIER_MAX_SIZE=52428800 #50MB
 
 # move to archive folder
@@ -36,6 +37,12 @@ fi
 
 if ! [ -f $GLACIER_ARCHIVES ] ; then
     touch $GLACIER_ARCHIVES
+fi
+
+if ! [ -f $GLACIER_IGNORE ] ; then
+    touch $GLACIER_IGNORE
+    echo ".DS_Store" >> $GLACIER_IGNORE
+    echo "._.DS_Store" >> $GLACIER_IGNORE
 fi
 
 # find all files, including in folders
@@ -83,22 +90,28 @@ find . -type f | sort | while read FILE ; do
 
     # check if file is not one of our bookkeeping files
 
-    if [ "$ARCHIVE" != "$GLACIER_LOCK" ] && [ "$ARCHIVE" != "$GLACIER_LOGS" ] && [ "$ARCHIVE" != "$GLACIER_VAULTS" ] && [ "$ARCHIVE" != "$GLACIER_ARCHIVES" ]; then
+    if [ "$ARCHIVE" != "$GLACIER_LOCK" ] && [ "$ARCHIVE" != "$GLACIER_LOGS" ] && [ "$ARCHIVE" != "$GLACIER_VAULTS" ] && [ "$ARCHIVE" != "$GLACIER_ARCHIVES" ] && [ "$ARCHIVE" != "$GLACIER_IGNORE" ]; then
 
-        # create vault if doesn't exist yet, mark as created
+        # check if file should be ignored
 
-        if ! grep -Fxq "$VAULT" $GLACIER_VAULTS ; then
-            echo "Creating vault '$VAULT'"
-            glacier-cmd mkvault "$VAULT" | tee -a $GLACIER_LOGS && echo "$VAULT" >> $GLACIER_VAULTS
-            echo "Vault '$VAULT' created"
-        fi
+        if ! grep -Fxq "$ARCHIVE" $GLACIER_IGNORE ; then
 
-        # upload file if not uploaded yet, mark as uploaded
+            # create vault if doesn't exist yet, mark as created
 
-        if ! grep -Fxq "$VAULT/$ARCHIVE" $GLACIER_ARCHIVES ; then
-            echo "Uploading [$VAULT] $ARCHIVE"
-            glacier-cmd upload "$VAULT" "$FILE" --description "$ARCHIVE" | tee -a $GLACIER_LOGS && echo "$VAULT/$ARCHIVE" >> $GLACIER_ARCHIVES
-            echo "Uploaded [$VAULT] $ARCHIVE"
+            if ! grep -Fxq "$VAULT" $GLACIER_VAULTS ; then
+                echo "Creating vault '$VAULT'"
+                glacier-cmd mkvault "$VAULT" | tee -a $GLACIER_LOGS && echo "$VAULT" >> $GLACIER_VAULTS
+                echo "Vault '$VAULT' created"
+            fi
+
+            # upload file if not uploaded yet, mark as uploaded
+
+            if ! grep -Fxq "$VAULT/$ARCHIVE" $GLACIER_ARCHIVES ; then
+                echo "Uploading [$VAULT] $ARCHIVE"
+                glacier-cmd upload "$VAULT" "$FILE" --description "$ARCHIVE" | tee -a $GLACIER_LOGS && echo "$VAULT/$ARCHIVE" >> $GLACIER_ARCHIVES
+                echo "Uploaded [$VAULT] $ARCHIVE"
+            fi
+
         fi
 
     fi
