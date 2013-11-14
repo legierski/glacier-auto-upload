@@ -2,6 +2,7 @@
 
 ARCHIVE_DIR=/media/archive
 GLACIER_STOP=.glacier-stop
+GLACIER_LOCK=.glacier-lock
 GLACIER_LOGS=.glacier-logs
 GLACIER_VAULTS=.glacier-vaults
 GLACIER_ARCHIVES=.glacier-archives
@@ -10,6 +11,18 @@ GLACIER_MAX_SIZE=52428800 #50MB
 # move to archive folder
 
 cd $ARCHIVE_DIR
+
+# stop processing script if it's already running
+
+if [ -f $GLACIER_LOCK ] ; then
+    echo "The script is already running, exiting"
+    echo "If you're sure the script is not running, try to delete '$GLACIER_LOCK' file"
+    exit 0
+fi
+
+# create lock file
+
+touch $GLACIER_LOCK
 
 # create files for bookkeeping
 
@@ -70,7 +83,7 @@ find . -type f | sort | while read FILE ; do
 
     # check if file is not one of our bookkeeping files
 
-    if [ "$ARCHIVE" != "$GLACIER_LOGS" ] && [ "$ARCHIVE" != "$GLACIER_VAULTS" ] && [ "$ARCHIVE" != "$GLACIER_ARCHIVES" ]; then
+    if [ "$ARCHIVE" != "$GLACIER_LOCK" ] && [ "$ARCHIVE" != "$GLACIER_LOGS" ] && [ "$ARCHIVE" != "$GLACIER_VAULTS" ] && [ "$ARCHIVE" != "$GLACIER_ARCHIVES" ]; then
 
         # create vault if doesn't exist yet, mark as created
 
@@ -96,5 +109,9 @@ done
 
 sort -o $GLACIER_VAULTS $GLACIER_VAULTS
 sort -o $GLACIER_ARCHIVES $GLACIER_ARCHIVES
+
+# remove lock file
+
+rm $GLACIER_LOCK
 
 echo "Script finished"
