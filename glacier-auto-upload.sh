@@ -56,13 +56,23 @@ find . -type f | sort | while read FILE ; do
         exit 0
     fi
 
-    # check the size, zip up and split if too big
+    # extract vault name and archive name
+
+    VAULT=$(dirname "$FILE")
+    VAULT=${VAULT:2} # cut off first 2 chars
+    VAULT=${VAULT////-} # replace all slashes with hyphens
+    VAULT=${VAULT//_/-} # replace all underscores with hyphens
+    VAULT=${VAULT// /-} # replace all spaces with hyphens
+    VAULT=${VAULT,,} # to lowercase
+    ARCHIVE=$(basename "$FILE")
+
+    # check the size, zip up and split if too big (only if not uploaded yet)
 
     FILESIZE=$(du -b "$FILE" | cut -f 1)
 
-    if [ $FILESIZE -gt $GLACIER_MAX_SIZE ] ; then
+    if [ $FILESIZE -gt $GLACIER_MAX_SIZE ] && ! grep -Fxq "$VAULT/$ARCHIVE" $GLACIER_ARCHIVES ; then
         echo "Splitting file"
-        7z a -v"$GLACIER_MAX_SIZE"b "$FILE".zip $FILE && rm $FILE
+        7z a -v"$GLACIER_MAX_SIZE"b "$FILE".zip "$FILE" && rm "$FILE"
     fi
 
 done
